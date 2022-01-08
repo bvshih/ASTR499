@@ -1,0 +1,1 @@
+model linking_length pyfof_grp N clump_mass[Msol] com_x[kpc] com_y[kpc] com_z[kpc] max_r[kpc] clump_r_avg[kpc] r[kpc] avg_temp[K] avg_pressure[Pa] avg_nHden[cm^-3] vdist[km/s] entropy[K/(Msolkpc**3)**(2/3)]
