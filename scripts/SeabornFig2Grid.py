@@ -1,3 +1,5 @@
+#https://stackoverflow.com/a/47664533
+
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
@@ -33,11 +35,13 @@ class SeabornFig2Grid():
 		h= self.sg.ax_joint.get_position().height
 		h2= self.sg.ax_marg_x.get_position().height
 		r = int(np.round(h/h2))
-		print("h = ", h) 
-		print("h2 = ", h2)
-		print("r = ", r)
+
+		#print("h = ", h) 
+		#print("h2 = ", h2)
+		#print("r = ", r)
+		
 		self._resize()
-		self.subgrid = gridspec.GridSpecFromSubplotSpec(r+2,r+2, subplot_spec=self.subplot)
+		self.subgrid = gridspec.GridSpecFromSubplotSpec(r+2, r+2, subplot_spec=self.subplot)
 
 		self._moveaxes(self.sg.ax_joint, self.subgrid[2:, :-1])
 		self._moveaxes(self.sg.ax_marg_x, self.subgrid[0, :-1])
