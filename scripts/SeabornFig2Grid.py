@@ -41,11 +41,11 @@ class SeabornFig2Grid():
 		#print("r = ", r)
 		
 		self._resize()
-		self.subgrid = gridspec.GridSpecFromSubplotSpec(r+2, r+2, subplot_spec=self.subplot)
+		self.subgrid = gridspec.GridSpecFromSubplotSpec(r+1, r+1, subplot_spec=self.subplot)
 
-		self._moveaxes(self.sg.ax_joint, self.subgrid[2:, :-1])
+		self._moveaxes(self.sg.ax_joint, self.subgrid[1:, :-1])
 		self._moveaxes(self.sg.ax_marg_x, self.subgrid[0, :-1])
-		self._moveaxes(self.sg.ax_marg_y, self.subgrid[2:, -1])
+		self._moveaxes(self.sg.ax_marg_y, self.subgrid[1:, -1])
 
 	def _moveaxes(self, ax, gs):
 		#https://stackoverflow.com/a/46906599/4124317
