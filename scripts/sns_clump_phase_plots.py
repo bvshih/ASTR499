@@ -14,8 +14,8 @@ sns.set(rc=rc)
 sns.set_style("ticks", rc=rc)
 
 def model_colors(model): 
-	DM_pal = sns.cubehelix_palette(n_colors=7, reverse=True)
-	SF_pal = sns.cubehelix_palette(n_colors=4, start=.5, rot=-.75)
+	DM_pal = sns.color_palette("rocket", n_colors=7)
+	SF_pal = sns.color_palette("mako", n_colors=4)
 
 	if model == 'P0':
 		pcol = SF_pal[0] 
@@ -160,7 +160,7 @@ def joint_clump_phase(models, output, outfile, phasex, phasey, legend, show_x, s
 	pcolor_r = []
 	for i in range(len(pcolor)): 
 		pcolor_r.append(pcolor[len(pcolor)-1-i])
-	g = sns.jointplot(data=f_dat, x=datx, y=daty, hue='model', s=2*f_dat['r[kpc]'], palette=pcolor_r, height=10, legend = legend, joint_kws = dict(alpha=0.75))
+	g = sns.jointplot(data=f_dat, x=datx, y=daty, hue='model', s=2*f_dat['r[kpc]'], palette=pcolor_r, height=10, legend = legend) #joint_kws = dict(alpha=0.75))
 	
 
 	g.ax_joint.scatter(-9, 4.5, c='k', s=2*10, label='r = ' + str(10) + ' kpc')

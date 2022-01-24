@@ -8,7 +8,7 @@ outputs = ['000384', '001536', '003456']
 phase = [['nHden','temp'], ['size', 'mass'], ['size', 'vdist']]
 
 #no legends
-legend = False
+legend = True
 
 for i in range(len(phase)):
     print(phase[i][0] + " vs " + phase[i][1])
