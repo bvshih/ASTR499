@@ -1,3 +1,4 @@
+from distutils.log import error
 import numpy as np 
 import pandas as pd 
 import seaborn as sns
@@ -5,6 +6,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from matplotlib.lines import Line2D
 import matplotlib.cm as cm 
+import sns_clump_phase_plots
+import math
+import itertools
 
 def open_pd_table(model, output, HI_cut, link_len):
 	
@@ -205,38 +209,60 @@ def pair_sns_stack_CMhist(models, outputs, z, HI, link_len, putz, hist_type):
 	plt.savefig(plotpath + hist_type + '_' + models[0] + models[1] + models[2] + models[3] + '_suite_' + outputs[0] + '-'+ outputs[len(outputs)-1] +  '_' + 'HI' + str(HI) + '_' + str(link_len) + 'kpc_clump_hist.pdf')
 	plt.show()
 
-def cum_CMF(models, outputs, z, HI, link_len):
-	fig, ax = plt.subplots(figsize=(12, 10))
-	linestyle = ['-', '--']
-	custom_lines = [Line2D([0], [0], linestyle='-', color='k', linewidth=3), Line2D([0], [0], linestyle='--', color='k', linewidth=3)]
-	colors = sns.cubehelix_palette(n_colors=4, reverse=True)	
+def cum_CMF(models, outputs, HI, link_len):
+	z = {3840: 0.06, 3456: 0.17, 1536: 1.18, 384: 4.58}	
+	fig, ax = plt.subplots(2, len(outputs), figsize=(len(outputs)*10, 20))
+	#linestyle = ['-', '--']
+	#custom_lines = [Line2D([0], [0], linestyle='-', color='k', linewidth=3), Line2D([0], [0], linestyle='--', color='k', linewidth=3)]
+	colors = []
 	
+	for i in range(len(models)):
+		colors.append(sns_clump_phase_plots.model_colors(models[i]))
+		print('added color for ' + models[i])
+
 	for i in range(len(models)): 
 		print('model = ' + models[i])
 		for j in range(len(outputs)):
-
 			pd_table = open_pd_table(models[i], outputs[j], HI, link_len)
 			
 			mass_mask = pd_table['clump_mass[Msol]'] < 10**10
 			mass = pd_table[mass_mask]['clump_mass[Msol]']
 			mass = np.flip(np.sort(mass))
-			N = np.arange(len(mass))
+
+			mass_counts = {}
+			for m in mass:
+				N = mass[mass>m].shape[0]
+				mass_counts[m] = N
+
+			dN = calc_dN(np.array(list(mass_counts.keys()), dtype=float), np.array(list(mass_counts.values()),dtype=int))
 			
-			if(i == 0):
-				plt.plot(mass, N, linestyle = linestyle[i], linewidth=3, color = colors[j], label ='z = ' + z[j])
-			else: 
-				plt.plot(mass, N, linestyle = linestyle[i], linewidth=3, color = colors[j])
-	plt.ylim(1, 5e3) 
-	plt.xlim(1e5, 4e9)
-	plt.loglog()
-	plt.xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
-	plt.ylabel(r'N( > M$_{\mathrm{clump}}$)', fontsize = 18)
-	plt.tick_params(labelsize = 18, direction='in')
-	legend1 = ax.legend(fontsize = 14, ncol = 1)  
-	ax.legend(custom_lines, models, loc='lower left', fontsize=14)
-	plt.gca().add_artist(legend1)
-	plt.savefig('/scratch/08263/tg875625/plots/' + models[0] + models[1] + '_suite_' + outputs[0] + '-'+ outputs[len(outputs)-1] +  '_' + 'HI' + str(HI) + '_' + str(link_len) + 'kpc_cumCMF.pdf')
-	plt.show() 
+			ax[0,j].plot(mass_counts.keys(), mass_counts.values(), linestyle = '-', linewidth = 3, color = colors[i], label = models[i])		
+			ax[1,j].plot(list(mass_counts.keys())[1:], dN, linestyle='--', linewidth = 3, color = colors[i], label = models[i])
+
+			ax[0,j].set_ylim(1, 5e3) 
+			ax[0,j].set_xlim(1e5, 4e9)
+			ax[0,j].set_xscale('symlog')
+			ax[0,j].set_yscale('symlog')
+			ax[0,j].tick_params(labelsize = 18, direction='in')
+			ax[0,j].tick_params(which='minor', direction='in')
+
+			ax[1,j].set_ylim(-1e9, 0) 
+			ax[1,j].set_xlim(1e5, 4e9)
+			ax[1,j].set_xscale('symlog')
+			ax[1,j].set_yscale('symlog')
+			ax[1,j].tick_params(labelsize = 18, direction='in')
+			ax[1,j].tick_params(which='minor', direction='in')
+
+			ax[0,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
+			ax[1,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
+
+	ax[0,0].set_ylabel(r'N( > M$_{\mathrm{clump}}$)', fontsize = 18)
+	ax[1,0].set_ylabel(r'$\frac{dN}{dlogM}$', fontsize = 18)
+	#legend1 = ax[0,len(outputs)-1].legend(fontsize = 14, ncol = 1)  
+	#ax.legend(custom_lines, models, loc='lower left', fontsize=14)
+	#plt.gca().add_artist(legend1)
+	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/symlog_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
+	
 
 def clump_size_relation(models, outputs, z, HI_cut, subplot, qty, link_len):
 	if(subplot == True): 
@@ -515,3 +541,16 @@ def clump_rpos_mass_whist(models, outputs, redshift, HI, fof_grp, dispersion, HI
 
 		sns.jointplot(data = pd_table, x = 'r[kpc]', y = 'clump_mass[Msol]')
 	
+def calc_dN(mass, N):
+	log_mass = np.log10(mass)
+	derivative = []
+	for i in range(len(N)-1):
+		derivative.append((N[i+1]-N[i])/(log_mass[i+1]-log_mass[i]))
+	#print(derivative)
+	return derivative
+
+def pairwise(iterable):
+    # pairwise('ABCDEFG') --> AB BC CD DE EF FG
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)

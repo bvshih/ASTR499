@@ -196,7 +196,7 @@ def grid_phase(model_type, models, outputs, phasex, phasey, legend, show):
 	outfile = './plots/model_cats_' + phasex + '_' + phasey + '_final.pdf'
 	#fig = plt.figure(figsize=(26,16))
 	#fig = plt.figure(figsize=(8,8))
-	fig = plt.figure(figsize=(len(model_type)*5, len(outputs)*6))
+	fig = plt.figure(figsize=(len(model_type)*6, len(outputs)*6))
 	#fig, axes = plt.subplots(ncols=3, nrows=3, sharex=True, sharey=True, figsize=(8,8))
 	gs = gridspec.GridSpec(len(model_type), len(outputs))
 
@@ -211,9 +211,9 @@ def grid_phase(model_type, models, outputs, phasex, phasey, legend, show):
 	show_x = np.append(np.zeros(len(model_type)-1, dtype = bool), True)
 	show_y = np.append(True, np.zeros(len(outputs)-1, dtype = bool))
 
-	#show redshift label only on left column
-	z_label = np.append(True, np.zeros(len(outputs)-1, dtype = bool))
-
+	#show redshift label only on top row
+	z_label = np.append(True, np.zeros(len(outputs)-1, dtype=bool))
+	
 	g = [] 
 	
 	for l in range(len(model_type)): 
@@ -221,7 +221,7 @@ def grid_phase(model_type, models, outputs, phasex, phasey, legend, show):
 		print('number of models in category = ', len(models[l]))		
 
 		for m in range(len(outputs)):
-			g.append(joint_clump_phase(models[l], outputs[m], outfile, phasex, phasey, legend[m], show_x[l], show_y[m], z_label[m], False, True))
+			g.append(joint_clump_phase(models[l], outputs[m], outfile, phasex, phasey, legend[m], show_x[l], show_y[m], z_label[l], False, True))
 
 	for k in range(len(g)):
 		mg = sfg.SeabornFig2Grid(g[k], fig, gs[k])
