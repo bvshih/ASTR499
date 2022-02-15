@@ -9,6 +9,7 @@ import matplotlib.cm as cm
 import sns_clump_phase_plots
 import math
 import itertools
+import statsmodels.api as sm
 
 def open_pd_table(model, output, HI_cut, link_len):
 	
@@ -210,6 +211,7 @@ def pair_sns_stack_CMhist(models, outputs, z, HI, link_len, putz, hist_type):
 	plt.show()
 
 def cum_CMF(models, outputs, HI, link_len):
+	lowess = sm.nonparametric.lowess
 	z = {3840: 0.06, 3456: 0.17, 1536: 1.18, 384: 4.58}	
 	fig, ax = plt.subplots(2, len(outputs), figsize=(len(outputs)*10, 20))
 	#linestyle = ['-', '--']
@@ -229,29 +231,38 @@ def cum_CMF(models, outputs, HI, link_len):
 			mass = pd_table[mass_mask]['clump_mass[Msol]']
 			mass = np.flip(np.sort(mass))
 
-			mass_counts = {}
+			mass_counts = {} #keys are mass, values are counts
+			
 			for m in mass:
 				N = mass[mass>m].shape[0]
 				mass_counts[m] = N
 
 			dN = calc_dN(np.array(list(mass_counts.keys()), dtype=float), np.array(list(mass_counts.values()),dtype=int))
 			
-			ax[0,j].plot(mass_counts.keys(), mass_counts.values(), linestyle = '-', linewidth = 3, color = colors[i], label = models[i])		
-			ax[1,j].plot(list(mass_counts.keys())[1:], dN, linestyle='--', linewidth = 3, color = colors[i], label = models[i])
+			smoothed_mass = lowess(list(mass_counts.values()), list(mass_counts.keys()), frac = .2)
+			smoothed_dN = calc_dN(smoothed_mass[:,0], smoothed_mass[:,1])
+
+			ax[0,j].scatter(mass_counts.keys(), mass_counts.values(), color = colors[i], label = models[i])	
+			ax[0,j].plot(smoothed_mass[:,0], smoothed_mass[:,1], linestyle = '-', linewidth = 3, color = colors[i], label = models[i])
+
+			ax[1,j].scatter(list(mass_counts.keys())[:-1], dN, color = colors[i], label = models[i])
+			ax[1,j].plot(smoothed_mass[:-1,0], smoothed_dN, linestyle='--', linewidth = 3, color = colors[i], label = models[i])
 
 			ax[0,j].set_ylim(1, 5e3) 
 			ax[0,j].set_xlim(1e5, 4e9)
 			ax[0,j].set_xscale('symlog')
 			ax[0,j].set_yscale('symlog')
 			ax[0,j].tick_params(labelsize = 18, direction='in')
-			ax[0,j].tick_params(which='minor', direction='in')
+			ax[0,j].minorticks_on()
+			#ax[0,j].tick_params(which='minor', direction='in')
 
-			ax[1,j].set_ylim(-1e9, 0) 
+			ax[1,j].set_ylim(-1e9, 0)
 			ax[1,j].set_xlim(1e5, 4e9)
 			ax[1,j].set_xscale('symlog')
 			ax[1,j].set_yscale('symlog')
 			ax[1,j].tick_params(labelsize = 18, direction='in')
-			ax[1,j].tick_params(which='minor', direction='in')
+			ax[1,j].minorticks_on()
+			#ax[1,j].tick_params(which='minor', direction='in')
 
 			ax[0,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
 			ax[1,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
@@ -261,7 +272,7 @@ def cum_CMF(models, outputs, HI, link_len):
 	#legend1 = ax[0,len(outputs)-1].legend(fontsize = 14, ncol = 1)  
 	#ax.legend(custom_lines, models, loc='lower left', fontsize=14)
 	#plt.gca().add_artist(legend1)
-	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/symlog_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
+	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/lowess_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
 	
 
 def clump_size_relation(models, outputs, z, HI_cut, subplot, qty, link_len):
