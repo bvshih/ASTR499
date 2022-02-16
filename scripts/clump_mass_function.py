@@ -9,6 +9,8 @@ import matplotlib.cm as cm
 import sns_clump_phase_plots
 import math
 import itertools
+from scipy.interpolate import UnivariateSpline
+import collections
 
 def open_pd_table(model, output, HI_cut, link_len):
 	
@@ -227,17 +229,23 @@ def cum_CMF(models, outputs, HI, link_len):
 			
 			mass_mask = pd_table['clump_mass[Msol]'] < 10**10
 			mass = pd_table[mass_mask]['clump_mass[Msol]']
-			mass = np.flip(np.sort(mass))
+			mass = np.sort(mass)
 
 			mass_counts = {}
 			for m in mass:
 				N = mass[mass>m].shape[0]
 				mass_counts[m] = N
 
+			x = np.linspace(mass[0], mass[-1], 1000)
+
+			spl = UnivariateSpline(list(mass_counts.keys()), list(mass_counts.values()), k=1)
 			dN = calc_dN(np.array(list(mass_counts.keys()), dtype=float), np.array(list(mass_counts.values()),dtype=int))
+			spl_dN = calc_dN(x, spl(x))
 			
-			ax[0,j].plot(mass_counts.keys(), mass_counts.values(), linestyle = '-', linewidth = 3, color = colors[i], label = models[i])		
-			ax[1,j].plot(list(mass_counts.keys())[1:], dN, linestyle='--', linewidth = 3, color = colors[i], label = models[i])
+			ax[0,j].scatter(mass_counts.keys(), mass_counts.values(), color = colors[i], label = models[i])	
+			ax[0,j].plot(x, spl(x), linestyle = '-', linewidth = 3, color = colors[i], label = models[i])
+			ax[1,j].scatter(list(mass_counts.keys())[:-2], dN[:-1], color = colors[i], label = models[i])
+			ax[1,j].plot(x[:-1], spl_dN, linestyle='--', linewidth = 3, color = colors[i], label = models[i])
 
 			ax[0,j].set_ylim(1, 5e3) 
 			ax[0,j].set_xlim(1e5, 4e9)
@@ -261,7 +269,7 @@ def cum_CMF(models, outputs, HI, link_len):
 	#legend1 = ax[0,len(outputs)-1].legend(fontsize = 14, ncol = 1)  
 	#ax.legend(custom_lines, models, loc='lower left', fontsize=14)
 	#plt.gca().add_artist(legend1)
-	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/symlog_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
+	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/spl_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
 	
 
 def clump_size_relation(models, outputs, z, HI_cut, subplot, qty, link_len):
