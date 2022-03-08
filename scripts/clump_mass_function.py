@@ -1,3 +1,4 @@
+from distutils.command.build_scripts import first_line_re
 from distutils.log import error
 import numpy as np 
 import pandas as pd 
@@ -9,6 +10,7 @@ import matplotlib.cm as cm
 import sns_clump_phase_plots
 import math
 import itertools
+from scipy.optimize import curve_fit
 
 def open_pd_table(model, output, HI_cut, link_len):
 	
@@ -215,7 +217,20 @@ def cum_CMF(models, outputs, HI, link_len):
 	#linestyle = ['-', '--']
 	#custom_lines = [Line2D([0], [0], linestyle='-', color='k', linewidth=3), Line2D([0], [0], linestyle='--', color='k', linewidth=3)]
 	colors = []
+			
+	# 3 breaks per z 
+	#guess break values
+	mass_guess = [[['beginning', 10**5.5], ['middle', 10**5.5, 10**6.5], ['end', 10**6.5]],# z1
+				 [['beginning', 10**5.5], ['middle', 10**5.5, 10**7.5], ['end', 10**7.5]], # z2
+				 [['beginning', 10**5.5], ['middle', 10**5.5, 10**7], ['end', 10**7]]] # z3
+
+	#intitial guess for curve fit [m,b]
+	p0 = [[[10**-2, 10**2], [10**-4, 10**3], [10**-2, 10**2]],
+		  [[10**-1, 10**3], [10**-3, 10**4], [10**-3, 10**3]],
+		  [[10**-1, 10**2], [10**-3, 10**3], [10**-3, 10**3]]]
 	
+	iterations = 10
+
 	for i in range(len(models)):
 		colors.append(sns_clump_phase_plots.model_colors(models[i]))
 		print('added color for ' + models[i])
@@ -223,6 +238,7 @@ def cum_CMF(models, outputs, HI, link_len):
 	for i in range(len(models)): 
 		print('model = ' + models[i])
 		for j in range(len(outputs)):
+			print('z = ' +  str(outputs[j]))
 			pd_table = open_pd_table(models[i], outputs[j], HI, link_len)
 			
 			mass_mask = pd_table['clump_mass[Msol]'] < 10**10
@@ -234,10 +250,18 @@ def cum_CMF(models, outputs, HI, link_len):
 				N = mass[mass>m].shape[0]
 				mass_counts[m] = N
 
+			
+			
+			fit = find_fit(mass_counts, mass_guess[j], p0[j], iterations)
+			#print("fit: ", fit)
+
 			dN = calc_dN(np.array(list(mass_counts.keys()), dtype=float), np.array(list(mass_counts.values()),dtype=int))
 			
-			ax[0,j].plot(mass_counts.keys(), mass_counts.values(), linestyle = '-', linewidth = 3, color = colors[i], label = models[i])		
-			ax[1,j].plot(list(mass_counts.keys())[1:], dN, linestyle='--', linewidth = 3, color = colors[i], label = models[i])
+
+			ax[0,j].scatter(mass_counts.keys(), mass_counts.values(), color = colors[i], label = models[i])	
+			for l in range(3):
+				ax[0,j].plot(fit[l][1], loglog(fit[l][1], *(fit[l][0])), linestyle='-', linewidth = 3, label = models[i])	
+			ax[1,j].plot(list(mass_counts.keys())[1:], dN, linestyle='-', linewidth = 3, color = colors[i], label = models[i])
 
 			ax[0,j].set_ylim(1, 5e3) 
 			ax[0,j].set_xlim(1e5, 4e9)
@@ -251,7 +275,7 @@ def cum_CMF(models, outputs, HI, link_len):
 			ax[1,j].set_xscale('symlog')
 			ax[1,j].set_yscale('symlog')
 			ax[1,j].tick_params(labelsize = 18, direction='in')
-			ax[1,j].tick_params(which='minor', direction='in')
+			ax[1,j].tick_params(which = 'minor', direction='in')
 
 			ax[0,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
 			ax[1,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
@@ -261,7 +285,7 @@ def cum_CMF(models, outputs, HI, link_len):
 	#legend1 = ax[0,len(outputs)-1].legend(fontsize = 14, ncol = 1)  
 	#ax.legend(custom_lines, models, loc='lower left', fontsize=14)
 	#plt.gca().add_artist(legend1)
-	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/symlog_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
+	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/curvefit_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
 	
 
 def clump_size_relation(models, outputs, z, HI_cut, subplot, qty, link_len):
@@ -554,3 +578,60 @@ def pairwise(iterable):
     a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
+
+def loglog(x,m,b):
+	return x**m * b
+
+def calc_fit(data, guess, p0):
+	if guess[0] == 'beginning':
+		subsection = {k:v for (k,v) in data.items() if k <= guess[1]}
+		x = np.array(list(subsection.keys()))
+		y = np.array(list(subsection.values()))
+	elif guess[0] == 'middle':
+		subsection = {k:v for (k,v) in data.items() if k >= guess[1]}
+		subsection = {k:v for (k,v) in subsection.items() if k <= guess[2]}
+		x = np.array(list(subsection.keys()))
+		y = np.array(list(subsection.values()))
+	else:
+		subsection = {k:v for (k,v) in data.items() if k >= guess[1]}
+		x = np.array(list(subsection.keys()))
+		y = np.array(list(subsection.values()))
+ 
+	popt, pcov = curve_fit(loglog, x, y, p0, maxfev = 5000)	
+	
+	return popt, x
+
+def find_fit(mass_counts, mass_guess, p0, iterations):
+	min_sd = 5 #positive value 
+	for n in range(iterations):
+		fit_n = [] #current fit
+		sd_n = [] #current sd
+		
+		#goes thru each segment 
+		try:
+			for k in range(3):
+				print("fitting section ", k)
+				popt, mass_arr = calc_fit(mass_counts, mass_guess[k], p0[k])
+				fit_n.append([popt, mass_arr])
+
+				print("mass lims: ", mass_arr[0], mass_arr[-1])
+
+
+				sd_n.append(np.corrcoef(mass_arr, [loglog(i, *popt) for i in mass_arr])[0,1]) #calculate goodness of fit
+			sd_n = sum(sd_n)
+			#print("sd: " + str(sd_n))
+
+			#check for better fit
+			if abs(sd_n) < min_sd:  
+				min_sd = sd_n
+				fit = fit_n
+			
+			#move mass guess 
+			mass_guess[0][1] = mass_guess[0][1] + 5000
+			mass_guess[1][1] = mass_guess[0][1]
+			mass_guess[1][2] = mass_guess[1][2] + 5000
+			mass_guess[2][1] = mass_guess[1][2]
+			print("moved mass guesses " , n, " times")
+		except RuntimeError:
+			continue
+	return fit 
