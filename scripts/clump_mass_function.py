@@ -220,20 +220,21 @@ def cum_CMF(models, outputs, HI, link_len):
 			
 	#4 breaks per z 
 	#guess break values
-	mass_guess = [[[10**5.2, 10**5.3],[10**5.4, 10**5.9],[10**6.1, 10**6.3]], #z1
-				  [[10**5.2, 10**5.4],[10**6.4,10**6.7],[10**7.3, 10**7.8]], #z2
-				  [[10**5.2, 10**5.4],[10**6.4, 10**6.7,],[10**6.9, 10**7]]] # z3
+	mass_guess = [[[10**5.2, 10**5.3],[10**5.4, 10**6],[10**6.1, 10**6.3]], #z1
+				  [[10**5.3, 10**5.5],[10**6.4,10**6.7],[10**7.3, 10**7.8]], #z2
+				  [[10**5.3, 10**5.4],[10**6.4, 10**6.7,],[10**6.9, 10**7]]] #z3
 
-	iterations = 10
+	iterations = 10 #number of times it will pick randomly between guess ranges to find best break for fit 
 
+	#add colors
 	for i in range(len(models)):
 		colors.append(sns_clump_phase_plots.model_colors(models[i]))
 		print('added color for ' + models[i])
 
-	for i in range(len(models)): 
-		print('model = ' + models[i])
-		for j in range(len(outputs)):
-			print('z = ' +  str(outputs[j]))
+	for j in range(len(outputs)): 
+		print('output = ' +  str(outputs[j]))
+		for i in range(len(models)):
+			print('model = ' + models[i])
 			pd_table = open_pd_table(models[i], outputs[j], HI, link_len)
 			
 			mass_mask = pd_table['clump_mass[Msol]'] < 10**10
@@ -248,38 +249,38 @@ def cum_CMF(models, outputs, HI, link_len):
 			fitted_counts = find_fit(mass_counts, mass_guess[j], iterations)
 
 			#print('fitted_counts', fitted_counts)
-			dN = calc_dN(np.array(list(mass_counts.keys()), dtype=float), np.array(list(mass_counts.values()),dtype=int))
-			fitted_dN = calc_dN(np.array(list(fitted_counts.keys()), dtype=float), np.array(list(fitted_counts.values()),dtype=float))
+			dN = calc_dN(np.array(list(mass_counts.keys()), dtype = float), np.array(list(mass_counts.values()), dtype = float))
+			fitted_dN = calc_dN(np.array(list(fitted_counts.keys()), dtype = float), np.array(list(fitted_counts.values()), dtype = float))
 
 			ax[0,j].scatter(mass_counts.keys(), mass_counts.values(), color = colors[i], label = models[i], alpha = 0.5, linewidths = 0.0, edgecolor = None)	
-			ax[0,j].plot(fitted_counts.keys(),fitted_counts.values(), linestyle='-', color = colors[i], linewidth = 3, label = models[i])
+			ax[0,j].plot(fitted_counts.keys(),fitted_counts.values(), linestyle = '-', color = colors[i], linewidth = 3, label = models[i])
 
-			ax[1,j].scatter(list(mass_counts.keys())[:-1], dN, color = colors[i], label = models[i], alpha = 0.5, linewidths = 0.0, edgecolor = None)	
-			ax[1,j].plot(list(fitted_counts.keys())[:-1], fitted_dN, linestyle='-', linewidth = 3, color = colors[i], label = models[i])
+			ax[1,j].scatter(dN.keys(), dN.values(), color = colors[i], label = models[i], alpha = 0.5, linewidths = 0.0, edgecolor = None)	
+			ax[1,j].plot(fitted_dN.keys(), fitted_dN.values(), linestyle = '-', linewidth = 3, color = colors[i], label = models[i])
 
-			ax[0,j].set_ylim(1, 5e3) 
-			ax[0,j].set_xlim(1e5, 4e9)
-			ax[0,j].set_xscale('symlog')
-			ax[0,j].set_yscale('symlog')
-			ax[0,j].tick_params(labelsize = 18, direction='in')
-			ax[0,j].tick_params(which='minor', direction='in')
+		ax[0,j].set_ylim(1, 5e3) 
+		ax[0,j].set_xlim(1e5, 4e9)
+		ax[0,j].set_xscale('log')
+		ax[0,j].set_yscale('log')
+		ax[0,j].tick_params(labelsize = 18, direction = 'in')
+		ax[0,j].tick_params(which ='minor', direction = 'in')
 
-			ax[1,j].set_ylim(-1e9, 0) 
-			ax[1,j].set_xlim(1e5, 4e9)
-			ax[1,j].set_xscale('symlog')
-			ax[1,j].set_yscale('symlog')
-			ax[1,j].tick_params(labelsize = 18, direction='in')
-			ax[1,j].tick_params(which = 'minor', direction='in')
+		ax[1,j].set_ylim(-1e9, 0) 
+		ax[1,j].set_xlim(1e5, 4e9)
+		ax[1,j].set_xscale('log')
+		ax[1,j].set_yscale('symlog', subs = [2,3,4,5,6,7,8,9] )
+		ax[1,j].tick_params(labelsize = 18, direction = 'in')
+		ax[1,j].tick_params(which = 'minor', direction = 'in')
 
-			ax[0,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
-			ax[1,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
+		ax[0,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
+		ax[1,j].set_xlabel(r'log$_{10}$ M$_{\mathrm{clump}}$ [M$_{\odot}$]', fontsize = 18)
 
 	ax[0,0].set_ylabel(r'N( > M$_{\mathrm{clump}}$)', fontsize = 18)
 	ax[1,0].set_ylabel(r'$\frac{dN}{dlogM}$', fontsize = 18)
 	#legend1 = ax[0,len(outputs)-1].legend(fontsize = 14, ncol = 1)  
 	#ax.legend(custom_lines, models, loc='lower left', fontsize=14)
 	#plt.gca().add_artist(legend1)
-	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/curvefit_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
+	plt.savefig('/scratch/08263/tg875625/ASTR499/scripts/plots/fix_curvefit_cumCMF_HI' + str(HI) + '_' + str(link_len) + 'kpc.pdf')
 	
 
 def clump_size_relation(models, outputs, z, HI_cut, subplot, qty, link_len):
@@ -559,22 +560,25 @@ def clump_rpos_mass_whist(models, outputs, redshift, HI, fof_grp, dispersion, HI
 
 		sns.jointplot(data = pd_table, x = 'r[kpc]', y = 'clump_mass[Msol]')
 	
+#equation used for fitting
+def loglog(x,m,b):
+	return x**m * b
+
 def calc_dN(mass, N):
 	log_mass = np.log10(mass)
 	derivative = []
 	for i in range(len(N)-1):
 		derivative.append((N[i+1]-N[i])/(log_mass[i+1]-log_mass[i]))
 	#print(derivative)
-	return derivative
 
-def pairwise(iterable):
-    # pairwise('ABCDEFG') --> AB BC CD DE EF FG
-    a, b = itertools.tee(iterable)
-    next(b, None)
-    return zip(a, b)
-
-def loglog(x,m,b):
-	return x**m * b
+	#remove jumps from broken power law joins
+	dN = {}
+	for i in range(len(derivative)):
+		if derivative[i] < 0:
+			dN[mass[i]] = derivative[i]
+		else:
+			continue
+	return dN
 
 def calc_fit(data, guess):
 	if guess[0] == 0:
@@ -597,82 +601,90 @@ def calc_fit(data, guess):
 		y = np.array(list(subsection.values()))
 
 	try:
+		#automatically calculate p0
 		guess_m = (y[1]-y[0])/(x[1]-x[0])
 		guess_b = np.max(y)+ guess_m*(np.min(x))
 		p0 = [guess_m, guess_b]
 		
+		#curve fit
 		popt, pcov = curve_fit(loglog, x, y, p0, maxfev = 5000)	
 		#print('popt', popt)
+
+		#calculate fitted counts
 		count_fit = [loglog(i,*popt) for i in x]
 	except TypeError:
-		print('not enough points to do least squares fit')
+		print('not enough points to do least squares fit, using original values')
 		count_fit = y
 	except IndexError:
+		print('not enough points to calculate p0, using original values')
 		count_fit = y
 	return count_fit, x
 
 def find_fit(mass_counts, mass_guess, iterations):
 	random.seed(234545)
-	
-	for n in range(iterations):
-		fit_n = [] #current fit
+	if len(mass_counts) != 0:
+		for n in range(iterations):
+			fit_n = [] #current fit
 
-		best_error = 10e6
-		#print("n:", n)
-		#choose random masses in the range
-		break1 = random.uniform(mass_guess[0][0], mass_guess[0][1])
-		break2 = random.uniform(mass_guess[1][0], mass_guess[1][1])
-		break3 = random.uniform(mass_guess[2][0], mass_guess[2][1])
-		#iterates thru each segment 
-		try:
-			for k in range(4):
-				if k == 0:
-					breaks = [0, break1]
-				elif k == 1:
-					breaks = [1, break1, break2]
-				elif k == 2:
-					breaks = [2, break2, break3]
-				elif k == 3:
-					breaks = [3, break3]
-				
-				try:
-					counts_n, mass_arr = calc_fit(mass_counts, breaks)
-					fit_n.append([mass_arr, counts_n])
-				except ValueError:
-					print('no vals in ydata')
-					continue
-			#print('fit n ', fit_n)
-
-			#flatten out fit_n so that [[mass_arr], [counts_n]]
-			fit_n = np.hstack(fit_n)
-			
-
-			#calculate difference between actual count vs fit count 
-			count_diff = []
-			for k in range(len(fit_n)):
-				#print('len fit_n[k]', len(fit_n[k]))
-				#print('len mass_counts', len(mass_counts))
-				for i in range(len(fit_n[k])-1):
-					count_n = list(mass_counts.values())[i]
-					if count_n == 0: #avoid division by zero
+			best_error = 10e6
+			#print("n:", n)
+			#choose random masses in the range
+			break1 = random.uniform(mass_guess[0][0], mass_guess[0][1])
+			break2 = random.uniform(mass_guess[1][0], mass_guess[1][1])
+			break3 = random.uniform(mass_guess[2][0], mass_guess[2][1])
+			#iterates thru each segment 
+			try:
+				for k in range(4):
+					if k == 0:
+						breaks = [0, break1]
+					elif k == 1:
+						breaks = [1, break1, break2]
+					elif k == 2:
+						breaks = [2, break2, break3]
+					elif k == 3:
+						breaks = [3, break3]
+					
+					try:
+						counts_n, mass_arr = calc_fit(mass_counts, breaks)
+						fit_n.append([mass_arr, counts_n])
+					except ValueError:
+						print('no vals in ydata')
 						continue
-					else:
-						dif_n = abs(count_n - fit_n[k][i])/count_n
-					count_diff.append(dif_n) 
+				#print('fit n ', fit_n)
 
-			avg_error = np.mean(count_diff)
-			#print('avg error ', avg_error)
-			#check for better fit
-			if abs(avg_error) < abs(best_error):  
-				best_error = avg_error
-				fit = fit_n
-		except RuntimeError:
-			print('RuntimeError, unable to fit')
-			continue	
+				#flatten out fit_n so that [[mass_arr], [counts_n]]
+				fit_n = np.hstack(fit_n)
+				
 
-	fitted_counts = {}
-	for i in range(len(fit[0])):
-		fitted_counts[fit[0][i]] = fit[1][i]
+				#calculate error between actual count vs fit count 
+				count_diff = []
+				for k in range(len(fit_n)):
+					#print('len fit_n[k]', len(fit_n[k]))
+					#print('len mass_counts', len(mass_counts))
+					for i in range(len(fit_n[k])-1):
+						count_n = list(mass_counts.values())[i]
+						if count_n == 0: #avoid division by zero
+							continue
+						else:
+							dif_n = abs(count_n - fit_n[k][i])/count_n
+						count_diff.append(dif_n) 
 
-	sorted_fit_counts = {k: v for k, v in sorted(fitted_counts.items(), key=lambda item: item[0])}
+				#average error 
+				avg_error = np.mean(count_diff)
+				#print('avg error ', avg_error)
+
+				#check for better fit using smaller average error
+				if abs(avg_error) < abs(best_error):  
+					best_error = avg_error
+					fit = fit_n
+			except RuntimeError:
+				print('RuntimeError, unable to fit with current breaks')
+				continue	
+
+		fitted_counts = {}
+		for i in range(len(fit[0])):
+			fitted_counts[fit[0][i]] = fit[1][i]
+		sorted_fit_counts = {k: v for k, v in sorted(fitted_counts.items(), key=lambda item: item[0])}
+	else:
+		sorted_fit_counts = {1:1}
 	return sorted_fit_counts
